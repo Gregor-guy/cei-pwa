@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#102A43" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="CEI News" />
+  <title>CEI Pro v2 - News & Intelligence Feed</title>
+  <link rel="manifest" href="news-feed-manifest.json" />
+  <link rel="stylesheet" href="news-feed.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <p class="eyebrow">CEI Pro v2</p>
+      <h1>News & Intelligence</h1>
+    </div>
+    <button id="backupBtn" class="icon-btn" aria-label="Open backup panel">⬇</button>
+  </header>
+
+  <main class="app-shell">
+    <section class="hero-card">
+      <div class="hero-top">
+        <div>
+          <p class="label">Signal Inbox</p>
+          <div class="score-line"><span id="newSignalsCount">0</span><span>new</span></div>
+        </div>
+        <div id="highImpactPill" class="pill blue">0 high impact</div>
+      </div>
+      <div class="hero-meta">
+        <div><span class="meta-label">Processed</span><strong id="processedCount">0</strong></div>
+        <div><span class="meta-label">Saved</span><strong id="savedCount">0</strong></div>
+        <div><span class="meta-label">Brief Items</span><strong id="briefCount">0</strong></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <div>
+          <p class="label">Quick Add</p>
+          <h2>Add News Signal</h2>
+        </div>
+        <button id="clearFormBtn" class="small-btn">Clear</button>
+      </div>
+      <div class="form-grid">
+        <input id="signalTitle" placeholder="Headline or signal summary" maxlength="160" />
+        <input id="signalSource" placeholder="Source, e.g. Bank of Canada, BCREA, FVREB" maxlength="90" />
+        <select id="signalCategory">
+          <option>Rates</option><option>Housing</option><option>Employment</option><option>Retail</option><option>Construction</option><option>Population</option><option>Municipal</option><option>Local Chilliwack</option><option>BC Economy</option><option>Canada Macro</option>
+        </select>
+        <select id="signalImpact">
+          <option>Bullish</option><option>Neutral</option><option>Bearish</option><option>Noise</option>
+        </select>
+        <select id="signalPriority">
+          <option>High</option><option>Medium</option><option>Low</option>
+        </select>
+        <select id="signalConfidence">
+          <option>High</option><option>Medium</option><option>Low</option>
+        </select>
+      </div>
+      <label class="field-label">Chilliwack Relevance</label>
+      <input id="signalRelevance" type="range" min="1" max="5" value="3" />
+      <div class="stars" id="relevanceStars">★★★☆☆</div>
+      <textarea id="signalWhy" placeholder="Why this matters for Chilliwack land development, Cedarbrook, retail, housing, approvals, or future acquisitions..."></textarea>
+      <input id="signalUrl" placeholder="Optional source URL" />
+      <button id="addSignalBtn" class="primary-btn">Add Signal</button>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <div>
+          <p class="label">Review Queue</p>
+          <h2>Unprocessed Signals</h2>
+        </div>
+        <button id="seedBtn" class="small-btn">Add Samples</button>
+      </div>
+      <div id="unprocessedList" class="signal-list"></div>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <div>
+          <p class="label">Friday Review</p>
+          <h2>Weekly Signal Digest</h2>
+        </div>
+        <button id="generateDigestBtn" class="small-btn">Generate</button>
+      </div>
+      <textarea id="digestOutput" readonly placeholder="Generate a weekly digest from saved and processed signals."></textarea>
+      <button id="copyDigestBtn" class="secondary-btn">Copy Digest</button>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <div>
+          <p class="label">Saved Intelligence</p>
+          <h2>Saved Signals</h2>
+        </div>
+        <button id="clearSavedBtn" class="small-btn danger-small">Clear Saved</button>
+      </div>
+      <div id="savedList" class="signal-list"></div>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <div>
+          <p class="label">Executive Output</p>
+          <h2>Leadership Items</h2>
+        </div>
+      </div>
+      <div class="two-col">
+        <div>
+          <h3>Talking Points</h3>
+          <div id="talkingList" class="compact-list"></div>
+        </div>
+        <div>
+          <h3>Brief Items</h3>
+          <div id="briefList" class="compact-list"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <button id="fab" class="fab" aria-label="Quick add signal">＋</button>
+
+  <div id="detailsPanel" class="panel hidden" role="dialog" aria-modal="true" aria-labelledby="detailsTitle">
+    <div class="panel-card">
+      <div class="section-head">
+        <h2 id="detailsTitle">Signal Details</h2>
+        <button id="closeDetails" class="icon-btn dark">×</button>
+      </div>
+      <div id="detailsContent"></div>
+    </div>
+  </div>
+
+  <div id="backupPanel" class="panel hidden" role="dialog" aria-modal="true" aria-labelledby="backupTitle">
+    <div class="panel-card">
+      <div class="section-head">
+        <h2 id="backupTitle">Backup / Export</h2>
+        <button id="closeBackup" class="icon-btn dark">×</button>
+      </div>
+      <p class="help-text">This module stores data in this browser. Export JSON before replacing files or changing devices.</p>
+      <button id="exportBtn" class="primary-btn">Export JSON</button>
+      <label class="file-label">Import JSON<input id="importFile" type="file" accept="application/json" /></label>
+      <button id="resetBtn" class="danger-btn">Reset News Feed Data</button>
+      <textarea id="backupPreview" readonly></textarea>
+    </div>
+  </div>
+
+  <template id="signalTemplate">
+    <article class="signal-card">
+      <div class="signal-head">
+        <div>
+          <div class="card-title signal-title"></div>
+          <div class="signal-source"></div>
+        </div>
+        <div class="signal-priority pill"></div>
+      </div>
+      <div class="tag-row">
+        <span class="tag signal-category"></span>
+        <span class="tag signal-impact"></span>
+        <span class="tag signal-confidence"></span>
+        <span class="tag signal-relevance"></span>
+      </div>
+      <p class="signal-why"></p>
+      <div class="action-grid">
+        <button class="classify bullish">Bullish</button>
+        <button class="classify neutral">Neutral</button>
+        <button class="classify bearish">Bearish</button>
+        <button class="classify noise">Noise</button>
+      </div>
+      <div class="action-grid secondary-actions">
+        <button class="save-top">Save Top Signal</button>
+        <button class="save-talk">Talking Point</button>
+        <button class="save-prediction">Prediction</button>
+        <button class="save-brief">Brief</button>
+      </div>
+      <button class="details-btn">View Details</button>
+    </article>
+  </template>
+
+  <script src="news-feed.js"></script>
+</body>
+</html>
