@@ -1,1 +1,175 @@
-<!doctype html><html><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>CEI PWA Pro</title><link rel="manifest" href="manifest.json"><style>body{font-family:system-ui;margin:0;background:#f5f7fb}header{background:#102a43;color:#fff;padding:12px}.tabs{display:flex;overflow:auto;background:#e5e7eb}.tabs button{padding:10px;border:0}.tab{display:none;padding:12px}.active{display:block}.card{background:#fff;border-radius:10px;padding:12px;margin:8px 0}textarea,input,select{width:100%}.kpi{font-size:32px;font-weight:bold}</style></head><body><header><h2>CEI PWA Pro v1.0</h2></header><div class=tabs><button onclick=s('d')>Dashboard</button><button onclick=s('r')>Radar</button><button onclick=s('p')>Predictions</button><button onclick=s('b')>Brief</button><button onclick=s('sv')>Sources</button></div><div id=d class='tab active'><div class=card><div class=kpi id=k>0/100</div><input id=cdei type=range min=0 max=100 oninput='k.innerText=this.value+"/100";save()'></div><div class=card><textarea id=signals rows=6 placeholder='Top 5 signals'></textarea></div><div class=card><textarea id=ammo rows=4 placeholder='Leadership ammo'></textarea></div></div><div id=r class=tab><div class=card><textarea id=radar rows=14 placeholder='Canada, BC, Fraser Valley, Chilliwack notes'></textarea></div></div><div id=p class=tab><div class=card><textarea id=pred rows=14 placeholder='Predictions and scoring'></textarea></div></div><div id=b class=tab><div class=card><textarea id=brief rows=14 placeholder='Executive brief'></textarea></div></div><div id=sv class=tab><div class=card><textarea id=src rows=14 placeholder='Claim | Source1 | Source2 | Source3 | Verified'></textarea></div></div><script>if('serviceWorker'in navigator){navigator.serviceWorker.register('sw.js')}function s(i){document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.getElementById(i).classList.add('active')}function save(){localStorage.ceipro=JSON.stringify({cdei:cdei.value,signals:signals.value,ammo:ammo.value,radar:radar.value,pred:pred.value,brief:brief.value,src:src.value})}document.addEventListener('input',save);window.onload=()=>{let d=JSON.parse(localStorage.ceipro||'{}');for(let k2 in d){let e=document.getElementById(k2);if(e)e.value=d[k2]} if(cdei.value)k.innerText=cdei.value+'/100'}</script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#102A43" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="CEI" />
+  <title>CEI Pro v2 - Home Dashboard</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <p class="eyebrow">CEI Pro v2</p>
+      <h1>Home Dashboard</h1>
+    </div>
+    <button id="backupBtn" class="icon-btn" aria-label="Open backup panel">⬇</button>
+  </header>
+
+  <main class="app-shell">
+    <section class="hero-card">
+      <div class="hero-top">
+        <div>
+          <p class="label">Chilliwack Development Environment Index</p>
+          <div class="score-line"><span id="cdeiScore">0</span><span>/100</span></div>
+        </div>
+        <div id="statusPill" class="pill red">Headwind</div>
+      </div>
+      <input id="cdeiRange" type="range" min="0" max="100" value="0" />
+      <div class="hero-meta">
+        <div><span class="meta-label">Level</span><strong id="levelText">Analyst</strong></div>
+        <div><span class="meta-label">Points</span><strong id="pointsText">0</strong></div>
+        <div><span class="meta-label">Next</span><strong id="nextLevelText">Strategist</strong></div>
+      </div>
+    </section>
+
+    <section class="metric-grid">
+      <div class="mini-card">
+        <p class="mini-label">Prediction Accuracy</p>
+        <strong id="accuracyText">0%</strong>
+        <span id="predictionBreakdown">0 correct · 0 partial · 0 wrong</span>
+      </div>
+      <div class="mini-card">
+        <p class="mini-label">Current Streak</p>
+        <strong><span id="streakText">0</span> weeks</strong>
+        <span>Best: <span id="bestStreakText">0</span> weeks</span>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <div>
+          <p class="label">This Week</p>
+          <h2>Weekly Completion</h2>
+        </div>
+        <div id="completionText" class="completion">0%</div>
+      </div>
+      <div class="progress"><div id="progressBar"></div></div>
+      <div class="checklist">
+        <label><input type="checkbox" data-check="monday" /> Monday Scan</label>
+        <label><input type="checkbox" data-check="wednesday" /> Wednesday Analysis</label>
+        <label><input type="checkbox" data-check="friday" /> Friday Brief</label>
+        <label><input type="checkbox" data-check="predictions" /> Score Predictions</label>
+      </div>
+      <button id="completeWeekBtn" class="secondary-btn">Complete Week + Add Streak</button>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <div>
+          <p class="label">Meeting Ready</p>
+          <h2>Leadership Talking Points</h2>
+        </div>
+        <button id="clearTalkingBtn" class="small-btn">Clear</button>
+      </div>
+      <div class="numbered-inputs">
+        <input id="talk1" placeholder="1. What should leadership know?" maxlength="160" />
+        <input id="talk2" placeholder="2. What risk or opportunity matters?" maxlength="160" />
+        <input id="talk3" placeholder="3. What should Westbow watch?" maxlength="160" />
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <div>
+          <p class="label">Signal Radar</p>
+          <h2>Top 5 Signals</h2>
+        </div>
+        <button id="addSignalBtn" class="small-btn">+ Add</button>
+      </div>
+      <div id="signalsList" class="signal-list"></div>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <div>
+          <p class="label">Local Lens</p>
+          <h2>Chilliwack Development Snapshot</h2>
+        </div>
+      </div>
+      <div class="snapshot-grid">
+        <div class="snapshot-row"><span>Housing</span><select data-snapshot="housing"><option>Bullish</option><option>Neutral</option><option>Bearish</option></select></div>
+        <div class="snapshot-row"><span>Retail</span><select data-snapshot="retail"><option>Bullish</option><option>Neutral</option><option>Bearish</option></select></div>
+        <div class="snapshot-row"><span>Multifamily</span><select data-snapshot="multifamily"><option>Bullish</option><option>Neutral</option><option>Bearish</option></select></div>
+        <div class="snapshot-row"><span>Industrial</span><select data-snapshot="industrial"><option>Bullish</option><option>Neutral</option><option>Bearish</option></select></div>
+        <div class="snapshot-row"><span>Land Acquisition</span><select data-snapshot="land"><option>Bullish</option><option>Neutral</option><option>Bearish</option></select></div>
+        <div class="snapshot-row"><span>Approvals</span><select data-snapshot="approvals"><option>Bullish</option><option>Neutral</option><option>Bearish</option></select></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <div>
+          <p class="label">Dopamine Engine</p>
+          <h2>Achievements</h2>
+        </div>
+      </div>
+      <div id="achievements" class="achievement-grid"></div>
+    </section>
+  </main>
+
+  <button id="fab" class="fab" aria-label="Quick capture">＋</button>
+
+  <div id="quickPanel" class="panel hidden" role="dialog" aria-modal="true" aria-labelledby="quickPanelTitle">
+    <div class="panel-card">
+      <div class="section-head">
+        <h2 id="quickPanelTitle">Quick Capture</h2>
+        <button id="closePanel" class="icon-btn">×</button>
+      </div>
+      <button class="capture-btn" data-quick="signal">➕ Add Signal</button>
+      <button class="capture-btn" data-quick="prediction">🎯 New Prediction</button>
+      <button class="capture-btn" data-quick="brief">📝 Brief Note</button>
+      <button class="capture-btn" data-quick="development">🏗 Development Update</button>
+      <button class="capture-btn" data-quick="talking">📌 Talking Point</button>
+      <textarea id="quickNote" placeholder="Quick note..."></textarea>
+      <button id="saveQuickNote" class="primary-btn">Save Quick Note</button>
+    </div>
+  </div>
+
+  <div id="backupPanel" class="panel hidden" role="dialog" aria-modal="true" aria-labelledby="backupTitle">
+    <div class="panel-card">
+      <div class="section-head">
+        <h2 id="backupTitle">Backup / Export</h2>
+        <button id="closeBackup" class="icon-btn">×</button>
+      </div>
+      <p class="help-text">This module stores data in this browser. Export JSON before replacing files or changing devices.</p>
+      <button id="exportBtn" class="primary-btn">Export JSON</button>
+      <label class="file-label">Import JSON<input id="importFile" type="file" accept="application/json" /></label>
+      <button id="resetBtn" class="danger-btn">Reset Dashboard Data</button>
+      <textarea id="backupPreview" readonly></textarea>
+    </div>
+  </div>
+
+  <template id="signalTemplate">
+    <article class="signal-card">
+      <div class="signal-main">
+        <select class="signal-category">
+          <option>Housing</option><option>Rates</option><option>Employment</option><option>Retail</option><option>Construction</option><option>Population</option><option>Municipal</option><option>Local</option>
+        </select>
+        <input class="signal-text" placeholder="Signal summary" maxlength="140" />
+      </div>
+      <div class="signal-controls">
+        <select class="signal-impact"><option>Bullish</option><option>Neutral</option><option>Bearish</option><option>Noise</option></select>
+        <select class="signal-confidence"><option>High</option><option>Medium</option><option>Low</option></select>
+        <button class="remove-signal">Remove</button>
+      </div>
+    </article>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>
