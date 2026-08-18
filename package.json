@@ -1,0 +1,9 @@
+{
+  "name": "cei-news-rss-function",
+  "version": "4.1.0",
+  "description": "CEI Netlify Function for RSS feed aggregation",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  }
+}
