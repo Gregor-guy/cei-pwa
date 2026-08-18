@@ -1,0 +1,12 @@
+[
+  {
+    "name": "Bank of Canada",
+    "category": "Rates",
+    "url": "https://www.bankofcanada.ca/rss-feeds/"
+  },
+  {
+    "name": "CMHC",
+    "category": "Housing",
+    "url": "https://www.cmhc-schl.gc.ca/media-newsroom/cmhc-news-room-rss"
+  }
+]
