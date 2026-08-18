@@ -2,24 +2,24 @@
 /* ===== Executive Intelligence ===== */
 
 .takeaway-heading,
-.prediction-*eading {
+.prediction-heading {
     margin-top: 14px;
 }
 
-*takeaway-text,
+.takeaway-text,
 .prediction-text {
-*   margin: 6px 0 0 0;
-    font-siz*: 13px;
+    margin: 6px 0 0 0;
+    font-size: 13px;
     line-height: 1.45;
-   *white-space: pre-wrap;
+    white-space: pre-wrap;
 }
 
-.takeawa*-text {
+.takeaway-text {
     color: #1e3a8a;
-    fo*t-weight: 600;
+    font-weight: 600;
 }
 
-.prediction-text*{
+.prediction-text {
     color: #0f766e;
-    font-sty*e: italic;
+    font-style: italic;
 }
