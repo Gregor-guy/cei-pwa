@@ -1,5 +1,5 @@
 {
-  "name": "CEI Pro v2 News Aggregator",
+  "name": "CEI Pro v2 News Aggregator Live",
   "short_name": "CEI Agg",
   "start_url": "./news-aggregator.html",
   "display": "standalone",
