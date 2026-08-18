@@ -1,0 +1,15 @@
+{
+  "name": "CEI Pro v2 News Aggregator",
+  "short_name": "CEI Agg",
+  "start_url": "./news-aggregator.html",
+  "display": "standalone",
+  "background_color": "#F4F7FB",
+  "theme_color": "#102A43",
+  "icons": [
+    {
+      "src": "news-aggregator-icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}

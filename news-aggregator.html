@@ -1,1 +1,137 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CEI News Aggregator MVP</title><link rel="stylesheet" href="news-aggregator.css"></head><body><header><h1>📰 News Aggregator</h1><button id="refresh">Refresh News</button></header><main><section class="summary"><div>Articles <strong>12</strong></div><div>High Relevance <strong>3</strong></div><div>Housing <strong>5</strong></div><div>Rates <strong>2</strong></div></section><section class="filters"><button>All</button><button>Housing</button><button>Rates</button><button>Retail</button><button>Chilliwack</button></section><section id="feed"></section></main><template id="card"><article class="card"><h3></h3><p class="src"></p><p class="why"></p><div class="actions"><button>Bullish</button><button>Neutral</button><button>Bearish</button><button>Noise</button></div><div class="actions"><button>Save Signal</button><button>Talking Point</button><button>Prediction</button><button>Brief</button></div></article></template><script src="news-aggregator.js"></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#102A43" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="CEI Aggregator" />
+  <title>CEI Pro v2 - News Aggregator</title>
+  <link rel="stylesheet" href="news-aggregator.css" />
+  <link rel="manifest" href="news-aggregator-manifest.json" />
+</head>
+<body>
+<header class="app-header">
+  <div>
+    <p class="eyebrow">CEI Pro v2</p>
+    <h1>News Aggregator</h1>
+  </div>
+  <a class="header-link" href="index.html">Dashboard</a>
+</header>
+
+<main class="app-shell">
+  <section class="hero-card">
+    <div class="hero-top">
+      <div>
+        <p class="label">My Intelligence Pipeline</p>
+        <div class="score-line"><span id="pipelineTotal">0</span><span>items</span></div>
+      </div>
+      <div id="weeklyPill" class="pill blue">0% weekly goal</div>
+    </div>
+    <div class="progress-track"><div id="weeklyBar"></div></div>
+    <div class="pipeline-grid">
+      <div><strong id="articlesReviewedCount">0</strong><span>Reviewed</span></div>
+      <div><strong id="savedSignalsCount">0</strong><span>Signals</span></div>
+      <div><strong id="talkingPointsCount">0</strong><span>Talking Points</span></div>
+      <div><strong id="predictionsCount">0</strong><span>Predictions</span></div>
+      <div><strong id="briefItemsCount">0</strong><span>Brief Items</span></div>
+    </div>
+  </section>
+
+  <section class="summary-card">
+    <div class="summary-item"><strong id="articleCount">0</strong><span>Articles</span></div>
+    <div class="summary-item"><strong id="highRelevanceCount">0</strong><span>High Relevance</span></div>
+    <div class="summary-item"><strong id="housingCount">0</strong><span>Housing</span></div>
+    <div class="summary-item"><strong id="ratesCount">0</strong><span>Rates</span></div>
+  </section>
+
+  <section class="toolbar">
+    <button class="primary-btn" id="refreshBtn">Refresh Sample News</button>
+    <button class="secondary-btn" id="clearDataBtn">Clear Pipeline Data</button>
+  </section>
+
+  <section class="filters" id="filters">
+    <button data-filter="All" class="active">All</button>
+    <button data-filter="Housing">Housing</button>
+    <button data-filter="Rates">Rates</button>
+    <button data-filter="Retail">Retail</button>
+    <button data-filter="Construction">Construction</button>
+    <button data-filter="Fraser Valley">Fraser Valley</button>
+    <button data-filter="Chilliwack">Chilliwack</button>
+  </section>
+
+  <section class="card manual-card">
+    <div class="section-head">
+      <div><p class="label">Manual Add</p><h2>Add Your Own Article</h2></div>
+      <button class="small-btn" id="clearManualBtn">Clear</button>
+    </div>
+    <input id="manualTitle" placeholder="Article or signal title" />
+    <input id="manualSource" placeholder="Source name" />
+    <input id="manualUrl" placeholder="Source URL" />
+    <select id="manualCategory">
+      <option>Rates</option><option>Housing</option><option>Retail</option><option>Construction</option><option>Fraser Valley</option><option>Chilliwack</option><option>Municipal</option><option>Population</option>
+    </select>
+    <textarea id="manualWhy" placeholder="Why this matters for Chilliwack / Westbow / Cedarbrook"></textarea>
+    <button class="primary-btn" id="addManualBtn">Add Article</button>
+  </section>
+
+  <section class="card">
+    <div class="section-head">
+      <div><p class="label">Articles</p><h2>Aggregator Feed</h2></div>
+      <span id="activeFilter" class="pill gray">All</span>
+    </div>
+    <div id="feed" class="feed-list"></div>
+  </section>
+
+  <section class="card">
+    <div class="section-head">
+      <div><p class="label">Outputs</p><h2>Leadership Pipeline</h2></div>
+      <button class="small-btn" id="copyDigestBtn">Copy Digest</button>
+    </div>
+    <textarea id="digestOutput" readonly placeholder="Your digest will appear here after you process articles."></textarea>
+  </section>
+</main>
+
+<nav class="bottom-nav">
+  <a href="index.html">🏠<span>Home</span></a>
+  <a href="news-feed.html">📡<span>Signals</span></a>
+  <a href="news-aggregator.html" class="active">📰<span>Aggregator</span></a>
+</nav>
+
+<div id="toast" class="toast hidden"></div>
+
+<template id="articleTemplate">
+  <article class="article-card">
+    <div class="article-head">
+      <div>
+        <p class="source-line"></p>
+        <h3 class="article-title"></h3>
+      </div>
+      <span class="stars"></span>
+    </div>
+    <div class="tag-row">
+      <span class="tag category-tag"></span>
+      <span class="tag tier-tag"></span>
+      <span class="tag impact-tag">Unclassified</span>
+    </div>
+    <p class="why-text"></p>
+    <div class="classification-grid">
+      <button data-impact="Bullish" class="bullish">Bullish</button>
+      <button data-impact="Neutral" class="neutral">Neutral</button>
+      <button data-impact="Bearish" class="bearish">Bearish</button>
+      <button data-impact="Noise" class="noise">Noise</button>
+    </div>
+    <div class="action-grid">
+      <button class="save-signal">Save Signal</button>
+      <button class="talking-point">Talking Point</button>
+      <button class="prediction">Prediction</button>
+      <button class="brief">Brief</button>
+      <button class="dashboard">Send to Dashboard</button>
+      <button class="open-source">Open Source</button>
+    </div>
+  </article>
+</template>
+
+<script src="news-aggregator.js"></script>
+</body>
+</html>
