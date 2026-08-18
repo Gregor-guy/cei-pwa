@@ -1,5 +1,6 @@
-// CEI RSS Function v4.3
+// CEI RSS Function v4.4
 // Real RSS/XML fetch plus article-aware Cedarbrook intelligence.
+// Adds executiveTakeaway and stronger prediction logic.
 // No npm dependencies required.
 // Endpoint: /.netlify/functions/rss-feed
 
@@ -65,7 +66,10 @@ const TERMS = {
     "zoning",
     "transportation",
     "townhome",
-    "apartment"
+    "apartment",
+    "affordable housing",
+    "new homes",
+    "housing units"
   ],
   rates: [
     "rate",
@@ -92,7 +96,10 @@ const TERMS = {
     "apartment",
     "multifamily",
     "multi-family",
-    "townhome"
+    "townhome",
+    "affordable housing",
+    "new homes",
+    "housing units"
   ],
   construction: [
     "construction",
@@ -201,12 +208,15 @@ function inferSignalType(article) {
 
   if (has(text, ["housing starts", "construction data", "housing completions", "starts and construction"])) return "SUPPLY_SIGNAL";
   if (has(text, ["housing design catalogue", "design catalogue", "standardized housing", "standardized designs", "local partner"])) return "PRODUCT_PLANNING_SIGNAL";
-  if (has(text, ["purpose-built rental", "rental", "rent growth", "rents", "vacancy"])) return "RENTAL_SIGNAL";
+  if (has(text, ["purpose-built rental", "rental", "rent growth", "rents", "vacancy", "rental homes", "rental housing"])) return "RENTAL_SIGNAL";
+  if (has(text, ["affordable housing", "affordable homes", "new affordable homes", "housing units", "new homes", "housing project", "housing development", "transitional housing", "seniors housing"])) return "GOVERNMENT_FUNDING_SIGNAL";
+  if (has(text, ["funding", "investment", "federal government supports", "government announces funding", "announces funding", "supports the construction", "support construction"])) return "GOVERNMENT_FUNDING_SIGNAL";
+  if (has(text, ["retrofit", "retrofits", "energy efficiency", "deep retrofit", "renewal", "repair", "repairs"])) return "HOUSING_RENEWAL_SIGNAL";
   if (has(text, ["affordability", "home prices", "ownership costs", "down payment", "income required"])) return "AFFORDABILITY_SIGNAL";
   if (has(text, ["population", "migration", "immigration", "household growth", "demographic"])) return "POPULATION_SIGNAL";
   if (has(text, ["retail", "consumer spending", "commercial", "store", "restaurant", "business opening"])) return "RETAIL_SIGNAL";
   if (has(text, ["employment", "jobs", "labour market", "labor market", "wages", "unemployment"])) return "EMPLOYMENT_SIGNAL";
-  if (has(text, ["interest rate", "rate decision", "bank of canada", "mortgage", "monetary policy", "inflation"])) return "RATE_SIGNAL";
+  if (has(text, ["interest rate", "rate announcement", "rate decision", "bank of canada", "mortgage", "monetary policy", "inflation", "summary of deliberations", "market participants survey", "business outlook survey"])) return "RATE_SIGNAL";
   if (has(text, ["construction cost", "building costs", "materials", "labour shortage", "labor shortage", "supply chain"])) return "COST_SIGNAL";
   if (has(text, ["permit", "approval", "zoning", "municipal", "development application", "entitlement"])) return "APPROVAL_SIGNAL";
   if (has(text, ["infrastructure", "transportation", "water", "sewer", "road", "servicing", "transit"])) return "SERVICING_SIGNAL";
@@ -266,8 +276,10 @@ function scoreArticle(article) {
   if (signalType !== "GENERAL_SIGNAL") score += 8;
   if (signalType === "SUPPLY_SIGNAL") score += 8;
   if (signalType === "RATE_SIGNAL") score += 8;
+  if (signalType === "GOVERNMENT_FUNDING_SIGNAL") score += 8;
   if (signalType === "APPROVAL_SIGNAL") score += 7;
   if (signalType === "SERVICING_SIGNAL") score += 7;
+  if (signalType === "RENTAL_SIGNAL") score += 6;
 
   const title = (article.title || "").toLowerCase();
   if (has(title, TERMS.local)) score += 10;
@@ -283,7 +295,7 @@ function inferImpact(article) {
     return "Bearish";
   }
 
-  if (has(text, ["grow", "growth", "increase", "increases", "rise", "rises", "lower rates", "rate cut", "cuts", "improve", "improves", "strong", "demand"])) {
+  if (has(text, ["grow", "growth", "increase", "increases", "rise", "rises", "lower rates", "rate cut", "cuts", "improve", "improves", "strong", "demand", "funding", "investment"])) {
     return "Bullish";
   }
 
@@ -302,6 +314,12 @@ function inferWhy(article) {
 
     case "RENTAL_SIGNAL":
       return "Rental market activity may influence future multifamily demand, tenure mix, investor appetite, and long-term rental strategy opportunities within Cedarbrook.";
+
+    case "GOVERNMENT_FUNDING_SIGNAL":
+      return "Government housing investment may accelerate future housing supply and influence competitive inventory levels. Monitor implications for long-term Cedarbrook absorption, affordability policy, and regional housing delivery momentum.";
+
+    case "HOUSING_RENEWAL_SIGNAL":
+      return "Housing retrofit or renewal investment may extend the life of existing housing stock and reduce near-term replacement demand. Monitor long-term implications for new housing absorption and affordability conditions.";
 
     case "AFFORDABILITY_SIGNAL":
       return "Affordability changes may affect buyer qualification, achievable pricing, product mix, release timing, and residential absorption rates at Cedarbrook.";
@@ -332,6 +350,54 @@ function inferWhy(article) {
   }
 }
 
+function executiveTakeaway(article) {
+  const signalType = inferSignalType(article);
+
+  switch (signalType) {
+    case "SUPPLY_SIGNAL":
+      return "Housing supply is expanding. Watch whether new inventory creates competitive pressure or confirms strong underlying demand.";
+
+    case "PRODUCT_PLANNING_SIGNAL":
+      return "Standardized housing delivery is becoming a practical policy and product strategy. Repeatable designs could become a speed-to-market advantage.";
+
+    case "RENTAL_SIGNAL":
+      return "Rental housing remains a priority segment. Persistent affordability pressure may keep rental demand resilient.";
+
+    case "GOVERNMENT_FUNDING_SIGNAL":
+      return "Public-sector housing investment remains active. Government funding may accelerate supply creation and shape local expectations around affordability and delivery timelines.";
+
+    case "HOUSING_RENEWAL_SIGNAL":
+      return "Existing housing renewal may relieve some pressure on new supply, but it can also signal ongoing affordability and inventory constraints.";
+
+    case "AFFORDABILITY_SIGNAL":
+      return "Affordability remains a key constraint on housing demand, price bands, and residential product positioning.";
+
+    case "POPULATION_SIGNAL":
+      return "Population growth remains one of the strongest long-term drivers of housing demand, retail support, and land value.";
+
+    case "RETAIL_SIGNAL":
+      return "Consumer and retail activity are useful leading indicators for commercial absorption and mixed-use demand.";
+
+    case "EMPLOYMENT_SIGNAL":
+      return "Labour market strength supports household formation, purchasing power, and housing absorption.";
+
+    case "RATE_SIGNAL":
+      return "Financing conditions remain the most important short-term driver of residential demand, land values, and underwriting confidence.";
+
+    case "COST_SIGNAL":
+      return "Construction cost pressure remains a direct threat to feasibility, margins, and delivery timing.";
+
+    case "APPROVAL_SIGNAL":
+      return "Approvals remain one of the highest-impact controllable risks in land development.";
+
+    case "SERVICING_SIGNAL":
+      return "Infrastructure capacity often determines the practical pace and location of future community growth.";
+
+    default:
+      return "Monitor for strategic implications affecting housing demand, land values, approvals, servicing, retail demand, or growth.";
+  }
+}
+
 function predictionHint(article) {
   const signalType = inferSignalType(article);
 
@@ -344,6 +410,12 @@ function predictionHint(article) {
 
     case "RENTAL_SIGNAL":
       return "If rental demand remains resilient, Cedarbrook multifamily or mixed-tenure planning may become more attractive over the next planning cycle.";
+
+    case "GOVERNMENT_FUNDING_SIGNAL":
+      return "If public funding continues flowing into housing supply, competitive inventory may increase over time and local governments may expect faster delivery from private projects.";
+
+    case "HOUSING_RENEWAL_SIGNAL":
+      return "If renewal funding expands, some existing housing may remain viable longer, which could slightly reduce replacement-driven demand for new supply.";
 
     case "AFFORDABILITY_SIGNAL":
       return "If affordability weakens, Cedarbrook may need tighter attention on product mix, price bands, and buyer qualification assumptions.";
@@ -380,6 +452,8 @@ function enrichArticle(article) {
   const signalType = inferSignalType(enrichedBase);
   const relevanceScore = scoreArticle(enrichedBase);
   const cedarbrookImpact = inferWhy(enrichedBase);
+  const takeaway = executiveTakeaway(enrichedBase);
+  const prediction = predictionHint(enrichedBase);
 
   return {
     ...enrichedBase,
@@ -393,7 +467,9 @@ function enrichArticle(article) {
     impact: article.impact && article.impact !== "Unclassified" ? article.impact : inferImpact(enrichedBase),
     cedarbrookImpact,
     why: cedarbrookImpact,
-    predictionHint: predictionHint(enrichedBase)
+    executiveTakeaway: takeaway,
+    predictionHint: prediction,
+    predictionText: prediction
   };
 }
 
@@ -437,7 +513,7 @@ async function fetchSource(source) {
     const response = await fetch(source.feedUrl, {
       signal: controller.signal,
       headers: {
-        "User-Agent": "CEI-News-Aggregator/4.3 (+Netlify Function)",
+        "User-Agent": "CEI-News-Aggregator/4.4 (+Netlify Function)",
         "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml, */*"
       }
     });
