@@ -101,7 +101,11 @@ function renderList(targetId, list, allowActions){
     card.querySelector('.save-prediction').onclick = () => addPrediction(signal);
     card.querySelector('.save-brief').onclick = () => addBriefItem(signal);
     card.querySelector('.details-btn').onclick = () => showDetails(signal);
-    if(!allowActions){ card.querySelector('.action-grid').style.display='none'; }
+if (!allowActions) {
+  card.querySelectorAll('.action-grid').forEach(grid => {
+    grid.style.display = 'none';
+  });
+}
     target.appendChild(node);
   });
 }
