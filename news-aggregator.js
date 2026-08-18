@@ -3,18 +3,88 @@ const weeklyGoal=20;let activeFilter='All';let articles=[];let sourceStatus=[];
 const fallbackArticles=[{id:'fallback-boc',title:'Bank of Canada feed unavailable fallback',source:'Bank of Canada',url:'https://www.bankofcanada.ca/rss-feeds/',link:'https://www.bankofcanada.ca/rss-feeds/',category:'Rates',tier:'Tier 1',relevance:4,relevanceScore:78,relevanceLevel:'Medium',highRelevance:false,chilliwackRelevant:true,fraserValleyRelevant:false,impact:'Unclassified',why:'Check source manually. Rate and monetary policy news may affect borrowing conditions and housing demand.',cedarbrookImpact:'Check source manually. Rate and monetary policy news may affect borrowing conditions and housing demand.',predictionHint:'If rate conditions ease or buyer confidence improves, Cedarbrook absorption assumptions may strengthen.',summary:''},{id:'fallback-cmhc',title:'CMHC feed unavailable fallback',source:'CMHC',url:'https://www.cmhc-schl.gc.ca/media-newsroom/cmhc-news-room-rss',link:'https://www.cmhc-schl.gc.ca/media-newsroom/cmhc-news-room-rss',category:'Housing',tier:'Tier 1',relevance:4,relevanceScore:82,relevanceLevel:'High',highRelevance:true,chilliwackRelevant:true,fraserValleyRelevant:false,impact:'Unclassified',why:'Check source manually. Housing news may affect starts, supply, affordability, and absorption assumptions.',cedarbrookImpact:'Check source manually. Housing news may affect starts, supply, affordability, and absorption assumptions.',predictionHint:'If housing demand remains resilient while supply is constrained, Cedarbrook release timing may improve.',summary:''}];
 const $=id=>document.getElementById(id);function get(k){return JSON.parse(localStorage.getItem(k)||'[]')}function set(k,v){localStorage.setItem(k,JSON.stringify(v))}function toast(m){const t=$('toast');t.textContent=m;t.classList.remove('hidden');setTimeout(()=>t.classList.add('hidden'),1800)}
 function stars(n){n=Math.max(1,Math.min(5,Number(n||3)));return '★★★★★'.slice(0,n)+'☆☆☆☆☆'.slice(0,5-n)}function starsFromScore(s){s=Number(s||0);return s>=90?5:s>=75?4:s>=60?3:s>=40?2:1}function impactClass(i){return i==='Bullish'?'green':i==='Neutral'?'yellow':i==='Bearish'?'red':'gray'}function relevanceClass(a){return (a.relevanceScore||0)>=80||a.relevanceLevel==='High'?'green':(a.relevanceScore||0)>=60||a.relevanceLevel==='Medium'?'yellow':'gray'}
-function normalizeArticle(a){const score=Number(a.relevanceScore||(Number(a.relevance||3)*20));const impact=a.cedarbrookImpact||a.why||'Review this source for possible Chilliwack land development implications.';return{id:a.id||('article-'+Date.now()+Math.random()),title:a.title||'Untitled article',source:a.source||'Unknown source',url:a.url||a.link||'',link:a.link||a.url||'',category:a.category||'General',tier:a.tier||'Source',relevance:Number(a.relevance||starsFromScore(score)),relevanceScore:score,relevanceLevel:a.relevanceLevel||(score>=80?'High':score>=60?'Medium':score>=40?'Watch':'Low'),highRelevance:typeof a.highRelevance==='boolean'?a.highRelevance:score>=80,chilliwackRelevant:!!a.chilliwackRelevant,fraserValleyRelevant:!!a.fraserValleyRelevant,impact:a.impact||'Unclassified',cedarbrookImpact:impact,why:impact,signalType:a.signalType||a.category||'General',predictionHint:a.predictionHint||
-`Track whether this signal changes ${a.category||'market'} conditions for Cedarbrook.`,
+function normalizeArticle(a){
+  const score = Number(
+    a.relevanceScore ||
+    (Number(a.relevance || 3) * 20)
+  );
 
-predictionText:a.predictionText||
-a.predictionHint||
-'',
+  const impact =
+    a.cedarbrookImpact ||
+    a.why ||
+    'Review this source for possible Chilliwack land development implications.';
 
-executiveTakeaway:a.executiveTakeaway||
-'',
+  return {
+    id: a.id || ('article-' + Date.now() + Math.random()),
+    title: a.title || 'Untitled article',
+    source: a.source || 'Unknown source',
 
-summary:a.summary||'',
-published:a.published||null
+    url: a.url || a.link || '',
+    link: a.link || a.url || '',
+
+    category: a.category || 'General',
+    tier: a.tier || 'Source',
+
+    relevance: Number(
+      a.relevance || starsFromScore(score)
+    ),
+
+    relevanceScore: score,
+
+    relevanceLevel:
+      a.relevanceLevel ||
+      (
+        score >= 80
+          ? 'High'
+          : score >= 60
+            ? 'Medium'
+            : score >= 40
+              ? 'Watch'
+              : 'Low'
+      ),
+
+    highRelevance:
+      typeof a.highRelevance === 'boolean'
+        ? a.highRelevance
+        : score >= 80,
+
+    chilliwackRelevant: !!a.chilliwackRelevant,
+    fraserValleyRelevant: !!a.fraserValleyRelevant,
+
+    impact: a.impact || 'Unclassified',
+
+    cedarbrookImpact: impact,
+    why: impact,
+
+    signalType:
+      a.signalType ||
+      a.category ||
+      'General',
+
+    predictionHint:
+      a.predictionHint ||
+      `Track whether this signal changes ${
+        a.category || 'market'
+      } conditions for Cedarbrook.`,
+
+    predictionText:
+      a.predictionText ||
+      a.predictionHint ||
+      '',
+
+    executiveTakeaway:
+      a.executiveTakeaway ||
+      '',
+
+    summary:
+      a.summary ||
+      '',
+
+    published:
+      a.published ||
+      null
+  };
+}
 async function loadLiveNews(){$('sourceStatus').innerHTML='<div class="empty">Loading live RSS articles...</div>';try{const response=await fetch('/.netlify/functions/rss-feed',{cache:'no-store'});if(!response.ok)throw new Error('Function returned HTTP '+response.status);const data=await response.json();sourceStatus=data.sources||[];articles=(data.articles||[]).map(normalizeArticle);if(!articles.length){articles=fallbackArticles.map(normalizeArticle);toast('No live articles returned. Showing fallback sources.')}localStorage.setItem('ceiAggregatorArticlesLive',JSON.stringify(articles));localStorage.setItem('ceiAggregatorSourceStatus',JSON.stringify(sourceStatus));$('lastUpdated').textContent=data.generatedAt?'Last updated: '+new Date(data.generatedAt).toLocaleString():'Last updated just now';toast('Live news refreshed');render()}catch(error){sourceStatus=[{source:'RSS Function',ok:false,error:error.message,count:0}];const stored=JSON.parse(localStorage.getItem('ceiAggregatorArticlesLive')||'null');articles=(stored||fallbackArticles).map(normalizeArticle);$('lastUpdated').textContent='Live refresh failed: '+error.message;toast('Live refresh failed. Showing stored/fallback articles.');render()}}
 function loadStored(){const stored=JSON.parse(localStorage.getItem('ceiAggregatorArticlesLive')||'null');const storedStatus=JSON.parse(localStorage.getItem('ceiAggregatorSourceStatus')||'null');articles=(stored||[]).map(normalizeArticle);sourceStatus=storedStatus||[];render();loadLiveNews()}
 function updateCounters(){const saved=get(STORAGE.savedSignals),talking=get(STORAGE.talking),preds=get(STORAGE.predictions),briefs=get(STORAGE.briefs),reviewed=get(STORAGE.reviewed);const total=reviewed.length+saved.length+talking.length+preds.length+briefs.length;$('pipelineTotal').textContent=total;$('articlesReviewedCount').textContent=reviewed.length;$('savedSignalsCount').textContent=saved.length;$('talkingPointsCount').textContent=talking.length;$('predictionsCount').textContent=preds.length;$('briefItemsCount').textContent=briefs.length;const pct=Math.min(100,Math.round(total/weeklyGoal*100));$('weeklyPill').textContent=pct+'% weekly goal';$('weeklyBar').style.width=pct+'%';$('articleCount').textContent=articles.length;$('highRelevanceCount').textContent=articles.filter(a=>a.highRelevance||a.relevanceScore>=80||a.relevanceLevel==='High').length;$('housingCount').textContent=articles.filter(a=>a.category==='Housing').length;$('ratesCount').textContent=articles.filter(a=>a.category==='Rates').length;generateDigest()}
