@@ -1,39 +1,542 @@
-// CEI RSS Function v4.2
-// Real RSS/XML fetch + article-aware Cedarbrook intelligence. No npm dependencies required.
+// CEI RSS Function v4.3
+// Real RSS/XML fetch plus article-aware Cedarbrook intelligence.
+// No npm dependencies required.
+// Endpoint: /.netlify/functions/rss-feed
+
 const SOURCES = [
-  { name: "Bank of Canada", category: "Rates", tier: "Tier 1", relevance: 5, feedUrl: "https://www.bankofcanada.ca/feed/", fallbackUrl: "https://www.bankofcanada.ca/rss-feeds/" },
-  { name: "CMHC", category: "Housing", tier: "Tier 1", relevance: 5, feedUrl: "https://www.cmhc-schl.gc.ca/media-newsroom/cmhc-news-room-rss", fallbackUrl: "https://www.cmhc-schl.gc.ca/media-newsroom/cmhc-news-room-rss" }
+  {
+    name: "Bank of Canada",
+    category: "Rates",
+    tier: "Tier 1",
+    relevance: 5,
+    feedUrl: "https://www.bankofcanada.ca/feed/",
+    fallbackUrl: "https://www.bankofcanada.ca/rss-feeds/"
+  },
+  {
+    name: "CMHC",
+    category: "Housing",
+    tier: "Tier 1",
+    relevance: 5,
+    feedUrl: "https://www.cmhc-schl.gc.ca/media-newsroom/cmhc-news-room-rss",
+    fallbackUrl: "https://www.cmhc-schl.gc.ca/media-newsroom/cmhc-news-room-rss"
+  }
 ];
 
 const TERMS = {
-  local: ["chilliwack", "fraser valley", "abbotsford", "mission", "langley", "hope", "lower mainland", "british columbia", "b.c.", "bc"],
-  cedarbrook: ["land", "development", "subdivision", "servicing", "infrastructure", "retail", "commercial", "industrial", "multifamily", "multi-family", "rental", "housing", "starts", "absorption", "population", "affordability", "mortgage", "interest rate", "rate", "inflation", "construction", "supply", "employment", "municipal", "approval", "permit", "zoning", "transportation", "townhome", "apartment"],
-  rates: ["rate", "rates", "interest", "mortgage", "monetary", "inflation", "bond", "credit", "borrowing", "lending"],
-  housing: ["housing", "home", "homes", "starts", "rental", "rent", "affordability", "supply", "inventory", "apartment", "multifamily", "multi-family", "townhome"],
-  construction: ["construction", "building", "materials", "labour", "labor", "supply chain", "cost", "costs", "permit", "permits"],
-  retail: ["retail", "consumer", "spending", "business", "commercial", "store", "restaurant", "employment", "population"],
-  approvals: ["municipal", "approval", "approvals", "zoning", "permit", "permits", "infrastructure", "servicing", "transportation", "water", "sewer", "road"]
+  local: [
+    "chilliwack",
+    "fraser valley",
+    "abbotsford",
+    "mission",
+    "langley",
+    "hope",
+    "lower mainland",
+    "british columbia",
+    "b.c.",
+    "bc"
+  ],
+  cedarbrook: [
+    "land",
+    "development",
+    "subdivision",
+    "servicing",
+    "infrastructure",
+    "retail",
+    "commercial",
+    "industrial",
+    "multifamily",
+    "multi-family",
+    "rental",
+    "housing",
+    "starts",
+    "absorption",
+    "population",
+    "affordability",
+    "mortgage",
+    "interest rate",
+    "rate",
+    "inflation",
+    "construction",
+    "supply",
+    "employment",
+    "municipal",
+    "approval",
+    "permit",
+    "zoning",
+    "transportation",
+    "townhome",
+    "apartment"
+  ],
+  rates: [
+    "rate",
+    "rates",
+    "interest",
+    "mortgage",
+    "monetary",
+    "inflation",
+    "bond",
+    "credit",
+    "borrowing",
+    "lending"
+  ],
+  housing: [
+    "housing",
+    "home",
+    "homes",
+    "starts",
+    "rental",
+    "rent",
+    "affordability",
+    "supply",
+    "inventory",
+    "apartment",
+    "multifamily",
+    "multi-family",
+    "townhome"
+  ],
+  construction: [
+    "construction",
+    "building",
+    "materials",
+    "labour",
+    "labor",
+    "supply chain",
+    "cost",
+    "costs",
+    "permit",
+    "permits"
+  ],
+  retail: [
+    "retail",
+    "consumer",
+    "spending",
+    "business",
+    "commercial",
+    "store",
+    "restaurant",
+    "employment",
+    "population"
+  ],
+  approvals: [
+    "municipal",
+    "approval",
+    "approvals",
+    "zoning",
+    "permit",
+    "permits",
+    "infrastructure",
+    "servicing",
+    "transportation",
+    "water",
+    "sewer",
+    "road"
+  ]
 };
 
 function decodeEntities(text = "") {
-  return text.replace(/<!\[CDATA\[(.*?)\]\]>/gs, "$1").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#039;/g, "'").replace(/&#8217;/g, "'").replace(/&#8211;/g, "-").replace(/&#8212;/g, "-").replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
+  return String(text)
+    .replace(/<!\[CDATA\[(.*?)\]\]>/gs, "$1")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#039;/g, "'")
+    .replace(/&#8217;/g, "'")
+    .replace(/&#8211;/g, "-")
+    .replace(/&#8212;/g, "-")
+    .replace(/<[^>]*>/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
-function getTag(block, tagName) { const m = block.match(new RegExp(`<${tagName}[^>]*>([\\s\\S]*?)<\\/${tagName}>`, "i")); return m ? decodeEntities(m[1]) : ""; }
-function getAtomLink(block) { const m = block.match(/<link[^>]+href=["']([^"']+)["'][^>]*>/i); return m ? m[1].trim() : ""; }
-function normalizeDate(value) { if (!value) return null; const d = new Date(value); return Number.isNaN(d.getTime()) ? null : d.toISOString(); }
-function textOf(a) { return `${a.source || ""} ${a.category || ""} ${a.title || ""} ${a.summary || ""}`.toLowerCase(); }
-function has(text, list) { return list.some(x => text.includes(x)); }
-function count(text, list) { return list.reduce((n, x) => n + (text.includes(x) ? 1 : 0), 0); }
-function inferCategory(a) { const t = textOf(a); const s = { Rates: count(t, TERMS.rates), Housing: count(t, TERMS.housing), Construction: count(t, TERMS.construction), Retail: count(t, TERMS.retail), Municipal: count(t, TERMS.approvals) }; const best = Object.entries(s).sort((x, y) => y[1] - x[1])[0]; return best && best[1] > 0 ? best[0] : (a.category || "General"); }
-function isChilliwackRelevant(a) { const t = textOf(a); return has(t, TERMS.local) || has(t, TERMS.cedarbrook); }
-function isFraserValleyRelevant(a) { return has(textOf(a), ["fraser valley", "chilliwack", "abbotsford", "mission", "hope", "langley", "lower mainland", "british columbia", "b.c.", "bc"]); }
-function relevanceLevel(score) { return score >= 80 ? "High" : score >= 60 ? "Medium" : score >= 40 ? "Watch" : "Low"; }
-function starsFromScore(score) { return score >= 90 ? 5 : score >= 75 ? 4 : score >= 60 ? 3 : score >= 40 ? 2 : 1; }
-function scoreArticle(a) { const t = textOf(a); let s = 30; if (a.tier === "Tier 1") s += 10; if (has(t, TERMS.local)) s += 25; if (has(t, TERMS.cedarbrook)) s += 20; if (has(t, TERMS.rates)) s += 12; if (has(t, TERMS.housing)) s += 12; if (has(t, TERMS.construction)) s += 9; if (has(t, TERMS.retail)) s += 8; if (has(t, TERMS.approvals)) s += 8; const title = (a.title || "").toLowerCase(); if (has(title, TERMS.local)) s += 10; if (has(title, TERMS.cedarbrook)) s += 10; return Math.max(0, Math.min(100, s)); }
-function inferImpact(a) { const t = textOf(a); if (has(t, ["decline", "declines", "fall", "falls", "drop", "drops", "slow", "slows", "weak", "recession", "higher rates"])) return "Bearish"; if (has(t, ["grow", "growth", "increase", "increases", "rise", "rises", "lower rates", "rate cut", "cuts", "improve", "strong", "demand"])) return "Bullish"; return "Neutral"; }
-function inferWhy(article) { const t = textOf(article); const local = isFraserValleyRelevant(article); if (has(t, TERMS.rates)) return local ? "Rate and credit conditions may directly affect Cedarbrook buyer qualification, financing costs, absorption pace, and land underwriting in the Fraser Valley." : "Rate and credit conditions may affect Cedarbrook through borrowing costs, mortgage qualification, buyer confidence, and return expectations for land development."; if (has(t, TERMS.housing)) return local ? "Housing supply, rental, affordability, or starts data may shift the read on Chilliwack demand, competitive inventory, and Cedarbrook absorption assumptions." : "Housing market movement may affect Cedarbrook feasibility assumptions, future inventory risk, rental demand, and the timing of residential releases."; if (has(t, TERMS.construction)) return "Construction cost, labour, supply, or permit signals may affect Cedarbrook delivery timing, contingencies, servicing assumptions, and pro forma risk."; if (has(t, TERMS.retail)) return "Retail, consumer, employment, or business signals may affect Cedarbrook commercial demand, tenant interest, traffic assumptions, and phasing strategy."; if (has(t, TERMS.approvals)) return "Municipal, infrastructure, servicing, or approval signals may affect Cedarbrook entitlement risk, schedule confidence, and coordination with public agencies."; return "Potential economic signal to review for Cedarbrook land development, Chilliwack growth, absorption, retail demand, or approval risk."; }
-function predictionHint(a) { const t = textOf(a); if (has(t, TERMS.rates)) return "If rate conditions ease or buyer confidence improves, Cedarbrook absorption and financing assumptions may strengthen over the next two quarters."; if (has(t, TERMS.housing)) return "If housing demand remains resilient while new supply is constrained, Cedarbrook residential release timing and absorption assumptions may improve."; if (has(t, TERMS.construction)) return "If construction cost or labour pressure increases, Cedarbrook contingency planning and delivery schedules may need closer monitoring."; if (has(t, TERMS.retail)) return "If consumer demand and local growth remain positive, Cedarbrook retail positioning may become stronger for tenant attraction conversations."; if (has(t, TERMS.approvals)) return "If approval or infrastructure constraints tighten, Cedarbrook schedule risk may increase and should be reviewed against current phasing assumptions."; return "Track whether this signal becomes confirmed by follow-up data before using it to adjust Cedarbrook assumptions."; }
-function enrichArticle(a) { const category = inferCategory(a); const article = { ...a, category }; const relevanceScore = scoreArticle(article); const cedarbrookImpact = inferWhy(article); return { ...article, relevanceScore, relevanceLevel: relevanceLevel(relevanceScore), relevance: starsFromScore(relevanceScore), highRelevance: relevanceScore >= 80, chilliwackRelevant: isChilliwackRelevant(article), fraserValleyRelevant: isFraserValleyRelevant(article), impact: a.impact && a.impact !== "Unclassified" ? a.impact : inferImpact(article), cedarbrookImpact, why: cedarbrookImpact, signalType: category, predictionHint: predictionHint(article) }; }
-function parseFeed(xml, source) { const blocks = xml.match(/<item[\s\S]*?<\/item>/gi) || xml.match(/<entry[\s\S]*?<\/entry>/gi) || []; return blocks.slice(0, 12).map(block => { const isAtom = /^<entry/i.test(block.trim()); const title = getTag(block, "title"); if (!title) return null; const link = isAtom ? (getAtomLink(block) || getTag(block, "link")) : getTag(block, "link"); const publishedRaw = getTag(block, "pubDate") || getTag(block, "published") || getTag(block, "updated"); const summary = getTag(block, "description") || getTag(block, "summary") || getTag(block, "content:encoded"); return enrichArticle({ id: `${source.name}-${title}`.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 120), title, source: source.name, category: source.category, tier: source.tier, relevance: source.relevance, impact: "Unclassified", link: link || source.fallbackUrl, url: link || source.fallbackUrl, published: normalizeDate(publishedRaw), summary, feedUrl: source.feedUrl }); }).filter(Boolean); }
-async function fetchSource(source) { const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), 9000); try { const response = await fetch(source.feedUrl, { signal: controller.signal, headers: { "User-Agent": "CEI-News-Aggregator/4.2 (+Netlify Function)", "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml, */*" } }); clearTimeout(timeout); if (!response.ok) return { source: source.name, ok: false, status: response.status, error: `HTTP ${response.status}`, articles: [] }; const text = await response.text(); if (!/<rss|<feed|<item|<entry/i.test(text)) return { source: source.name, ok: false, status: response.status, error: "Response did not look like RSS/Atom XML. Check feedUrl.", articles: [] }; const articles = parseFeed(text, source); return { source: source.name, ok: true, status: response.status, count: articles.length, articles }; } catch (error) { clearTimeout(timeout); return { source: source.name, ok: false, status: 0, error: error.name === "AbortError" ? "Request timed out" : error.message, articles: [] }; } }
-exports.handler = async (event) => { if (event.httpMethod === "OPTIONS") return { statusCode: 204, headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, OPTIONS", "Access-Control-Allow-Headers": "Content-Type" }, body: "" }; const results = await Promise.all(SOURCES.map(fetchSource)); const sources = results.map(({ source, ok, status, error, count }) => ({ source, ok, status, error, count: count || 0 })); const byId = new Map(); results.forEach(r => r.articles.forEach(a => { if (!byId.has(a.id)) byId.set(a.id, a); })); const articles = Array.from(byId.values()).sort((a, b) => (b.published ? new Date(b.published).getTime() : 0) - (a.published ? new Date(a.published).getTime() : 0)).slice(0, 30); return { statusCode: 200, headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "public, max-age=900", "Access-Control-Allow-Origin": "*" }, body: JSON.stringify({ generatedAt: new Date().toISOString(), sources, articles }) }; };
+
+function getTag(block, tagName) {
+  const regex = new RegExp(`<${tagName}[^>]*>([\\s\\S]*?)<\\/${tagName}>`, "i");
+  const match = block.match(regex);
+  return match ? decodeEntities(match[1]) : "";
+}
+
+function getAtomLink(block) {
+  const match = block.match(/<link[^>]+href=["']([^"']+)["'][^>]*>/i);
+  return match ? match[1].trim() : "";
+}
+
+function normalizeDate(value) {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+function textOf(article) {
+  return `${article.source || ""} ${article.category || ""} ${article.title || ""} ${article.summary || ""}`.toLowerCase();
+}
+
+function titleSummaryOf(article) {
+  return `${article.title || ""} ${article.summary || ""}`.toLowerCase();
+}
+
+function has(text, list) {
+  return list.some(term => text.includes(term));
+}
+
+function count(text, list) {
+  return list.reduce((n, term) => n + (text.includes(term) ? 1 : 0), 0);
+}
+
+function inferCategory(article) {
+  const text = textOf(article);
+  const scores = {
+    Rates: count(text, TERMS.rates),
+    Housing: count(text, TERMS.housing),
+    Construction: count(text, TERMS.construction),
+    Retail: count(text, TERMS.retail),
+    Municipal: count(text, TERMS.approvals)
+  };
+
+  const best = Object.entries(scores).sort((a, b) => b[1] - a[1])[0];
+  return best && best[1] > 0 ? best[0] : article.category || "General";
+}
+
+function inferSignalType(article) {
+  const text = titleSummaryOf(article);
+
+  if (has(text, ["housing starts", "construction data", "housing completions", "starts and construction"])) return "SUPPLY_SIGNAL";
+  if (has(text, ["housing design catalogue", "design catalogue", "standardized housing", "standardized designs", "local partner"])) return "PRODUCT_PLANNING_SIGNAL";
+  if (has(text, ["purpose-built rental", "rental", "rent growth", "rents", "vacancy"])) return "RENTAL_SIGNAL";
+  if (has(text, ["affordability", "home prices", "ownership costs", "down payment", "income required"])) return "AFFORDABILITY_SIGNAL";
+  if (has(text, ["population", "migration", "immigration", "household growth", "demographic"])) return "POPULATION_SIGNAL";
+  if (has(text, ["retail", "consumer spending", "commercial", "store", "restaurant", "business opening"])) return "RETAIL_SIGNAL";
+  if (has(text, ["employment", "jobs", "labour market", "labor market", "wages", "unemployment"])) return "EMPLOYMENT_SIGNAL";
+  if (has(text, ["interest rate", "rate decision", "bank of canada", "mortgage", "monetary policy", "inflation"])) return "RATE_SIGNAL";
+  if (has(text, ["construction cost", "building costs", "materials", "labour shortage", "labor shortage", "supply chain"])) return "COST_SIGNAL";
+  if (has(text, ["permit", "approval", "zoning", "municipal", "development application", "entitlement"])) return "APPROVAL_SIGNAL";
+  if (has(text, ["infrastructure", "transportation", "water", "sewer", "road", "servicing", "transit"])) return "SERVICING_SIGNAL";
+
+  return "GENERAL_SIGNAL";
+}
+
+function isChilliwackRelevant(article) {
+  const text = textOf(article);
+  return has(text, TERMS.local) || has(text, TERMS.cedarbrook);
+}
+
+function isFraserValleyRelevant(article) {
+  return has(textOf(article), [
+    "fraser valley",
+    "chilliwack",
+    "abbotsford",
+    "mission",
+    "hope",
+    "langley",
+    "lower mainland",
+    "british columbia",
+    "b.c.",
+    "bc"
+  ]);
+}
+
+function relevanceLevel(score) {
+  if (score >= 80) return "High";
+  if (score >= 60) return "Medium";
+  if (score >= 40) return "Watch";
+  return "Low";
+}
+
+function starsFromScore(score) {
+  if (score >= 90) return 5;
+  if (score >= 75) return 4;
+  if (score >= 60) return 3;
+  if (score >= 40) return 2;
+  return 1;
+}
+
+function scoreArticle(article) {
+  const text = textOf(article);
+  const signalType = inferSignalType(article);
+  let score = 30;
+
+  if (article.tier === "Tier 1") score += 10;
+  if (has(text, TERMS.local)) score += 25;
+  if (has(text, TERMS.cedarbrook)) score += 20;
+  if (has(text, TERMS.rates)) score += 12;
+  if (has(text, TERMS.housing)) score += 12;
+  if (has(text, TERMS.construction)) score += 9;
+  if (has(text, TERMS.retail)) score += 8;
+  if (has(text, TERMS.approvals)) score += 8;
+
+  if (signalType !== "GENERAL_SIGNAL") score += 8;
+  if (signalType === "SUPPLY_SIGNAL") score += 8;
+  if (signalType === "RATE_SIGNAL") score += 8;
+  if (signalType === "APPROVAL_SIGNAL") score += 7;
+  if (signalType === "SERVICING_SIGNAL") score += 7;
+
+  const title = (article.title || "").toLowerCase();
+  if (has(title, TERMS.local)) score += 10;
+  if (has(title, TERMS.cedarbrook)) score += 10;
+
+  return Math.max(0, Math.min(100, score));
+}
+
+function inferImpact(article) {
+  const text = textOf(article);
+
+  if (has(text, ["decline", "declines", "fall", "falls", "drop", "drops", "slow", "slows", "weak", "recession", "higher rates"])) {
+    return "Bearish";
+  }
+
+  if (has(text, ["grow", "growth", "increase", "increases", "rise", "rises", "lower rates", "rate cut", "cuts", "improve", "improves", "strong", "demand"])) {
+    return "Bullish";
+  }
+
+  return "Neutral";
+}
+
+function inferWhy(article) {
+  const signalType = inferSignalType(article);
+
+  switch (signalType) {
+    case "SUPPLY_SIGNAL":
+      return "Housing starts and construction activity may indicate future supply pressure. Monitor Fraser Valley competitive inventory and potential impacts on Cedarbrook absorption, release timing, and pricing power.";
+
+    case "PRODUCT_PLANNING_SIGNAL":
+      return "Standardized housing designs or catalogue-based delivery may reduce design complexity, approval friction, and delivery timelines. This may be relevant for future Cedarbrook product planning, repeatable housing forms, and municipal conversations.";
+
+    case "RENTAL_SIGNAL":
+      return "Rental market activity may influence future multifamily demand, tenure mix, investor appetite, and long-term rental strategy opportunities within Cedarbrook.";
+
+    case "AFFORDABILITY_SIGNAL":
+      return "Affordability changes may affect buyer qualification, achievable pricing, product mix, release timing, and residential absorption rates at Cedarbrook.";
+
+    case "POPULATION_SIGNAL":
+      return "Population growth may strengthen long-term housing demand, retail support, school demand, traffic assumptions, and future phase absorption within Cedarbrook.";
+
+    case "RETAIL_SIGNAL":
+      return "Retail and consumer trends may influence tenant demand, commercial lease-up assumptions, daily-needs retail support, and future service offerings within Cedarbrook Village Centre.";
+
+    case "EMPLOYMENT_SIGNAL":
+      return "Employment growth may improve household formation, purchasing power, and housing demand within Chilliwack and the Fraser Valley. Weakening employment would increase absorption and affordability risk.";
+
+    case "RATE_SIGNAL":
+      return "Interest rate and credit conditions may directly affect buyer qualification, borrowing costs, residential absorption, land valuations, and development underwriting assumptions.";
+
+    case "COST_SIGNAL":
+      return "Construction cost pressures may affect project margins, contingency requirements, servicing budgets, tender strategy, and development phasing decisions.";
+
+    case "APPROVAL_SIGNAL":
+      return "Approval and permitting trends may affect entitlement risk, development timelines, consultant coordination, and project delivery certainty for Cedarbrook and similar Chilliwack projects.";
+
+    case "SERVICING_SIGNAL":
+      return "Infrastructure or servicing investment may affect development capacity, transportation access, utility planning, municipal coordination, and long-term growth opportunities around Cedarbrook.";
+
+    default:
+      return "Monitor this signal for potential impacts on Cedarbrook land development, absorption, municipal planning, retail demand, servicing assumptions, or long-term growth strategy.";
+  }
+}
+
+function predictionHint(article) {
+  const signalType = inferSignalType(article);
+
+  switch (signalType) {
+    case "SUPPLY_SIGNAL":
+      return "If housing starts continue rising, competitive inventory may increase and Cedarbrook absorption assumptions should be reviewed against future supply conditions.";
+
+    case "PRODUCT_PLANNING_SIGNAL":
+      return "If standardized housing design gains traction, Cedarbrook may have an opportunity to reduce design cycle time and improve repeatable product delivery.";
+
+    case "RENTAL_SIGNAL":
+      return "If rental demand remains resilient, Cedarbrook multifamily or mixed-tenure planning may become more attractive over the next planning cycle.";
+
+    case "AFFORDABILITY_SIGNAL":
+      return "If affordability weakens, Cedarbrook may need tighter attention on product mix, price bands, and buyer qualification assumptions.";
+
+    case "POPULATION_SIGNAL":
+      return "If population growth remains strong, Cedarbrook housing demand, retail support, and phase absorption may improve over the next 12 to 24 months.";
+
+    case "RETAIL_SIGNAL":
+      return "If consumer and local retail demand improve, Cedarbrook Village Centre tenant conversations may strengthen.";
+
+    case "EMPLOYMENT_SIGNAL":
+      return "If employment conditions improve, household formation and buyer confidence may support stronger Cedarbrook absorption.";
+
+    case "RATE_SIGNAL":
+      return "If rate conditions ease or buyer confidence improves, Cedarbrook absorption and financing assumptions may strengthen over the next two quarters.";
+
+    case "COST_SIGNAL":
+      return "If construction cost pressure increases, Cedarbrook contingency planning and delivery schedules may need closer monitoring.";
+
+    case "APPROVAL_SIGNAL":
+      return "If approval or permitting constraints tighten, Cedarbrook schedule risk may increase and should be reviewed against current phasing assumptions.";
+
+    case "SERVICING_SIGNAL":
+      return "If infrastructure capacity improves, Cedarbrook development timing and surrounding land value assumptions may strengthen.";
+
+    default:
+      return "Track whether this signal becomes confirmed by follow-up data before using it to adjust Cedarbrook assumptions.";
+  }
+}
+
+function enrichArticle(article) {
+  const category = inferCategory(article);
+  const enrichedBase = { ...article, category };
+  const signalType = inferSignalType(enrichedBase);
+  const relevanceScore = scoreArticle(enrichedBase);
+  const cedarbrookImpact = inferWhy(enrichedBase);
+
+  return {
+    ...enrichedBase,
+    signalType,
+    relevanceScore,
+    relevanceLevel: relevanceLevel(relevanceScore),
+    relevance: starsFromScore(relevanceScore),
+    highRelevance: relevanceScore >= 80,
+    chilliwackRelevant: isChilliwackRelevant(enrichedBase),
+    fraserValleyRelevant: isFraserValleyRelevant(enrichedBase),
+    impact: article.impact && article.impact !== "Unclassified" ? article.impact : inferImpact(enrichedBase),
+    cedarbrookImpact,
+    why: cedarbrookImpact,
+    predictionHint: predictionHint(enrichedBase)
+  };
+}
+
+function parseFeed(xml, source) {
+  const blocks = xml.match(/<item[\s\S]*?<\/item>/gi) || xml.match(/<entry[\s\S]*?<\/entry>/gi) || [];
+
+  return blocks
+    .slice(0, 12)
+    .map(block => {
+      const isAtom = /^<entry/i.test(block.trim());
+      const title = getTag(block, "title");
+      if (!title) return null;
+
+      const link = isAtom ? getAtomLink(block) || getTag(block, "link") : getTag(block, "link");
+      const publishedRaw = getTag(block, "pubDate") || getTag(block, "published") || getTag(block, "updated");
+      const summary = getTag(block, "description") || getTag(block, "summary") || getTag(block, "content:encoded");
+
+      return enrichArticle({
+        id: `${source.name}-${title}`.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 120),
+        title,
+        source: source.name,
+        category: source.category,
+        tier: source.tier,
+        relevance: source.relevance,
+        impact: "Unclassified",
+        link: link || source.fallbackUrl,
+        url: link || source.fallbackUrl,
+        published: normalizeDate(publishedRaw),
+        summary,
+        feedUrl: source.feedUrl
+      });
+    })
+    .filter(Boolean);
+}
+
+async function fetchSource(source) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 9000);
+
+  try {
+    const response = await fetch(source.feedUrl, {
+      signal: controller.signal,
+      headers: {
+        "User-Agent": "CEI-News-Aggregator/4.3 (+Netlify Function)",
+        "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml, */*"
+      }
+    });
+
+    clearTimeout(timeout);
+
+    if (!response.ok) {
+      return {
+        source: source.name,
+        ok: false,
+        status: response.status,
+        error: `HTTP ${response.status}`,
+        articles: []
+      };
+    }
+
+    const text = await response.text();
+
+    if (!/<rss|<feed|<item|<entry/i.test(text)) {
+      return {
+        source: source.name,
+        ok: false,
+        status: response.status,
+        error: "Response did not look like RSS/Atom XML. Check feedUrl.",
+        articles: []
+      };
+    }
+
+    const articles = parseFeed(text, source);
+
+    return {
+      source: source.name,
+      ok: true,
+      status: response.status,
+      count: articles.length,
+      articles
+    };
+  } catch (error) {
+    clearTimeout(timeout);
+
+    return {
+      source: source.name,
+      ok: false,
+      status: 0,
+      error: error.name === "AbortError" ? "Request timed out" : error.message,
+      articles: []
+    };
+  }
+}
+
+exports.handler = async event => {
+  if (event.httpMethod === "OPTIONS") {
+    return {
+      statusCode: 204,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type"
+      },
+      body: ""
+    };
+  }
+
+  const results = await Promise.all(SOURCES.map(fetchSource));
+
+  const sources = results.map(({ source, ok, status, error, count }) => ({
+    source,
+    ok,
+    status,
+    error,
+    count: count || 0
+  }));
+
+  const byId = new Map();
+  results.forEach(result => {
+    result.articles.forEach(article => {
+      if (!byId.has(article.id)) byId.set(article.id, article);
+    });
+  });
+
+  const articles = Array.from(byId.values())
+    .sort((a, b) => {
+      const da = a.published ? new Date(a.published).getTime() : 0;
+      const db = b.published ? new Date(b.published).getTime() : 0;
+      return db - da;
+    })
+    .slice(0, 30);
+
+  return {
+    statusCode: 200,
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "public, max-age=900",
+      "Access-Control-Allow-Origin": "*"
+    },
+    body: JSON.stringify({
+      generatedAt: new Date().toISOString(),
+      sources,
+      articles
+    })
+  };
+};
